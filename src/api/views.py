@@ -2,11 +2,13 @@ import logging
 
 from django.utils.text import slugify
 from django.db import IntegrityError
+from django.shortcuts import get_object_or_404
 from requests.exceptions import HTTPError, RequestException
-from rest_framework import mixins, status, viewsets
+from rest_framework import exceptions, mixins, status, viewsets
 from rest_framework.response import Response
 
-from api.models import Movie
+from api.models import Comment, Movie
+from api.serializers import CommentSerializer
 from api.serializers import MovieSerializer, MovieRequestSerializer
 from api.services import get_omdb_movie
 
@@ -17,16 +19,20 @@ logger = logging.getLogger(__name__)
 class MovieViewSet(mixins.ListModelMixin,
                    mixins.RetrieveModelMixin,
                    viewsets.GenericViewSet):
+    """View set providing handlers for POST and GET on /movies"""
     queryset = Movie.objects.all()
     serializer_class = MovieSerializer
 
     def create(self, request, *args, **kwargs):
-        """Create movie entry based on sent title."""
+        """Create movie entry based on sent title. Handle POST on /movies
+
+        This method calls `get_omdb_movie` which requests external API.
+        """
         movie_request = MovieRequestSerializer(data=request.data)
 
         def movie_exists_response():
             return Response({
-                "title": ["Movie with given title already exists."]
+                'title': ['Movie with given title already exists.']
             }, status=status.HTTP_409_CONFLICT)
 
         if not movie_request.is_valid():
@@ -44,17 +50,17 @@ class MovieViewSet(mixins.ListModelMixin,
         try:
             details = get_omdb_movie(title)
         except HTTPError as e:
-            logging.error("omdabpi http error: %s - %r", e.errno, e.strerror)
+            logging.error('omdabpi http error: %s - %r', e.errno, e.strerror)
             return Response({
-                "OMDB API": [
+                'OMDB API': [
                     e.strerror,
                 ],
             })
         except RequestException as e:
-            logging.error("omdbapi raised exception: %r", e)
+            logging.error('omdbapi raised exception: %r', e)
             return Response({
-                "OMDB API": [
-                    "External service is unavailable. Please try again later.",
+                'OMDB API': [
+                    'External service is unavailable. Please try again later.',
                 ],
             }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
@@ -66,6 +72,30 @@ class MovieViewSet(mixins.ListModelMixin,
             movie.save()
         except IntegrityError:
             return movie_exists_response()
-        logger.info("Created new movie: %s", movie.title)
+        logger.info('Created new movie: %s', movie.title)
         # return new movie in response
         return Response(MovieSerializer(movie).data)
+
+
+class CommentsViewSet(mixins.ListModelMixin,
+                      mixins.CreateModelMixin,
+                      viewsets.GenericViewSet):
+    """View set providing handlers for POST and GET on /comments"""
+    serializer_class = CommentSerializer
+
+    def get_queryset(self):
+        """Optionally filter to `movie_id` passed in querystring."""
+        queryset = Comment.objects.all()
+        movie_id = self.request.query_params.get('movie_id', None)
+        if movie_id is not None:
+            try:
+                movie_id = int(movie_id)
+            except ValueError:
+                raise exceptions.ValidationError({
+                    'movie_id': [
+                        'Incorrect movie_id type. Expected int.',
+                    ],
+                })
+            movie = get_object_or_404(Movie, id=movie_id)
+            queryset = queryset.filter(movie_id=movie)
+        return queryset

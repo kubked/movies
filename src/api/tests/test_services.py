@@ -1,15 +1,16 @@
 from unittest.mock import Mock, patch
 
 from requests.exceptions import RequestException
-from nose.tools import assert_equal, assert_dict_equal, assert_raises
 from django.test import TestCase
 
 from api.services import get_omdb_movie
 
 
 class OMDBAPITestCase(TestCase):
+    """Test calling omdb api with movies database"""
     @patch('api.services.requests.get')
     def test_omdb_api_getting_movie_succesfully(self, mock_omdb):
+        """Test getting sample movie with mocked request"""
         # set mock response
         movie = {
             "Title": "A-Ha: Take on Me",
@@ -21,12 +22,12 @@ class OMDBAPITestCase(TestCase):
             "Director": "Steve Barron",
             "Writer": "N/A",
             "Actors": "A-Ha, Bunty Bailey, Morten Harket, Philip Jackson",
-            "Plot": "This classic clip presents the story of a young girl ...",
+            "Plot": "This classic clip presents the story of a young girl...",
             "Language": "English",
             "Country": "UK",
             "Awards": "N/A",
-            "Poster": "https://images-na.ssl-images-amazon.com/images/MXVyNDE4OTY5NzI@._V1_SX300.jpg",
-            "Ratings": [{"Source": "Internet Movie Database", "Value": "8.5/10"}],
+            "Poster": "https://images-na.ssl-images-amazon",
+            "Ratings": [{"Source": "IMDB", "Value": "8.5/10"}],
             "Metascore": "N/A",
             "imdbRating": "8.5",
             "imdbVotes": "416",
@@ -43,13 +44,16 @@ class OMDBAPITestCase(TestCase):
 
         response = get_omdb_movie("A-Ha: Take on Me")
         # compare get_omdb_move response with mocked movie
-        assert_dict_equal(response, movie)
+        self.assertDictEqual(response, movie)
 
     @patch('api.services.requests.get')
     def test_omdb_api_raising_exception(self, mock_omdb):
+        """Test if exception is properly rethrowed or unhandled"""
         mock_omdb.side_effect = RequestException()
-        assert_raises(RequestException, get_omdb_movie, 'A-Ha!')
+        with self.assertRaises(RequestException):
+            get_omdb_movie('A-Ha!')
 
     def test_omdb_api_real_request(self):
+        """Unmocked test with real api call"""
         response = get_omdb_movie('A-Ha: Take on Me')
-        assert_equal(response['Title'], 'A-Ha: Take on Me')
+        self.assertEqual(response['Title'], 'A-Ha: Take on Me')
