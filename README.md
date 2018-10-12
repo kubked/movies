@@ -2,7 +2,7 @@
 
 Simple Django Rest Framework app providing REST API with movies downloaded from [OMDB API](http://www.omdbapi.com/).
 
-[![Build Status](https://travis-ci.org/kubked/movies.svg?branch=master)](https://travis-ci.org/kubked/movies) [![Coverage Status](https://coveralls.io/repos/github/kubked/movies/badge.svg)](https://coveralls.io/github/kubked/movies)
+[![Build Status](https://travis-ci.org/kubked/movies.svg?branch=master)](https://travis-ci.org/kubked/movies) [![Coverage Status](https://coveralls.io/repos/github/kubked/movies/badge.svg?branch=master)](https://coveralls.io/github/kubked/movies?branch=master)
 
 ## Getting Started
 Movies is hosted on Heroku: 
