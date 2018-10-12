@@ -14,9 +14,9 @@ from api.services import get_omdb_movie
 logger = logging.getLogger(__name__)
 
 
-class MovieList(mixins.ListModelMixin,
-                mixins.RetrieveModelMixin,
-                viewsets.GenericViewSet):
+class MovieViewSet(mixins.ListModelMixin,
+                   mixins.RetrieveModelMixin,
+                   viewsets.GenericViewSet):
     queryset = Movie.objects.all()
     serializer_class = MovieSerializer
 
