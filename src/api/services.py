@@ -1,8 +1,11 @@
-import urllib.parse as urlparse
+import logging
 
 import requests
 
 from core import settings
+
+
+logger = logging.getLogger(__name__)
 
 
 class InvalidStatusError(requests.exceptions.RequestException):
@@ -26,7 +29,15 @@ def get_omdb_movie(movie_title):
         params=params,
         timeout=settings.OMDB_API_TIMEOUT,
     )
+    response.raise_for_status()
     if response.ok:
-        return response.json()
-    else:
-        raise InvalidStatusError()
+        payload = response.json()
+        # should be 404 IMO not 200 with 'Response': 'False'
+        if payload['Response'] == 'False':
+            raise requests.exceptions.HTTPError(404, 'Movie not found')
+        else:
+            logger.info("omdbapi request completed: %s", movie_title)
+            return payload
+    raise requests.exceptions.HTTPError(
+        response.status_code, 'OMDB API exception'
+    )
