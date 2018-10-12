@@ -71,3 +71,9 @@ OMDB_API_TIMEOUT = 5
 
 # load django_heroku settings
 django_heroku.settings(locals())
+
+# load local settings
+try:
+    from core.local_settings import *
+except ImportError:
+    pass
