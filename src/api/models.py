@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.postgres.fields import JSONField
+from django.utils.text import Truncator
 
 
 class Movie(models.Model):
@@ -13,3 +14,13 @@ class Movie(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class Comment(models.Model):
+    movie_id = models.ForeignKey(Movie, on_delete=models.CASCADE)
+    # creation timestamp
+    created = models.DateTimeField(auto_now_add=True)
+    comment = models.TextField()
+
+    def __str__(self):
+        return Truncator(self.comment).chars(60)
