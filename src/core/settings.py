@@ -60,6 +60,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PARSER_CLASSES': (
         'rest_framework.parsers.JSONParser',
     ),
+    'TEST_REQUEST_DEFAULT_FORMAT': 'json',
     # set unathicated user to None if django.contrib.auth is removed
     'UNAUTHENTICATED_USER': None,
 }

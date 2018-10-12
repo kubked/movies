@@ -8,7 +8,8 @@ from rest_framework import status
 from api.models import Movie
 
 
-class MovieViewSetTestCase(APITestCase):
+class MovieViewSetCreateTestCase(APITestCase):
+    """Test set focused on creating new movie's entries"""
     def setUp(self):
         def create_dummy_movie(title):
             Movie.objects.create(
@@ -23,7 +24,7 @@ class MovieViewSetTestCase(APITestCase):
         """Try to create movie which exists in database."""
         url = reverse('movie-list')
         data = {'title': 'First Movie'}
-        response = self.client.post(url, data, format='json')
+        response = self.client.post(url, data)
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
 
     @patch('api.services.requests.get')
@@ -38,7 +39,7 @@ class MovieViewSetTestCase(APITestCase):
 
         url = reverse('movie-list')
         data = {'title': 'second'}
-        response = self.client.post(url, data, format='json')
+        response = self.client.post(url, data)
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
 
     @patch('api.services.requests.get')
@@ -55,7 +56,7 @@ class MovieViewSetTestCase(APITestCase):
 
         url = reverse('movie-list')
         data = {'title': 'Third Movie'}
-        response = self.client.post(url, data, format='json')
+        response = self.client.post(url, data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(Movie.objects.count(), movies_before_request + 1)
 
@@ -65,7 +66,19 @@ class MovieViewSetTestCase(APITestCase):
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_create_wrong_content_type(self):
+    def test_create_too_long_title(self):
+        """Try to create movie with too long title (>255 chars)"""
+        url = reverse('movie-list')
+        response = self.client.post(url, {'title': 'AB' * 150})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_empty_title(self):
+        """Try to create movie with empty title"""
+        url = reverse('movie-list')
+        response = self.client.post(url, {'title': ''})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_with_wrong_content_type(self):
         """Try to create movie with another content_type than JSON"""
         url = reverse('movie-list')
         response = self.client.post(
@@ -73,4 +86,70 @@ class MovieViewSetTestCase(APITestCase):
         )
         self.assertEqual(
             response.status_code, status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
+        )
+
+
+class MovieViewSetListTestCase(APITestCase):
+    """Test set focused on retrieving movies using API"""
+    def setUp(self):
+        def create_dummy_movie(title):
+            Movie.objects.create(
+                title=title,
+                details={'Title': title},
+                slug=slugify(title)
+            )
+        create_dummy_movie('First Movie')
+        create_dummy_movie('Second Movie')
+
+    def test_get_movies_list(self):
+        """Get list of all movies in DB"""
+        url = reverse('movie-list')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        payload = response.json()
+        self.assertEqual(len(payload), 2)
+        # check if all details are not empty
+        self.assertTrue(all(movie['details'] for movie in payload))
+
+
+class MovieViewSetListCreateTestCase(APITestCase):
+    """Test set focused on retrieving movies using API after movie creation"""
+    def setUp(self):
+        def create_dummy_movie(title):
+            Movie.objects.create(
+                title=title,
+                details={'Title': title},
+                slug=slugify(title)
+            )
+        create_dummy_movie('First Movie')
+        create_dummy_movie('Second Movie')
+
+    @patch('api.services.requests.get')
+    def test_create_movie_and_get_movies_list(self, mock):
+        """Create new movie and check if it's on list"""
+        movie = {
+            'Title': 'Third Movie',
+            'Response': 'True',
+        }
+        mock.return_value = Mock(ok=True)
+        mock.return_value.json.return_value = movie
+
+        url = reverse('movie-list')
+
+        # get old list
+        response = self.client.get(url)
+        payload = response.json()
+        self.assertEqual(len(payload), 2)
+
+        # create new movie
+        self.client.post(url, {'title': 'Third Movie'})
+
+        # get updated list
+        response = self.client.get(url)
+        payload = response.json()
+        self.assertEqual(len(payload), 3)
+        # check if new movie is on list
+        self.assertTrue(
+            any(movie['title'] == 'Third Movie' for movie in payload)
         )
