@@ -1,10 +1,15 @@
+import datetime
 import logging
 
 from django.utils.text import slugify
 from django.db import IntegrityError
+from django.db.models import Case, F, Sum, When
+from django.db.models.expressions import Window
+from django.db.models.fields import IntegerField
+from django.db.models.functions import DenseRank, Coalesce
 from django.shortcuts import get_object_or_404
 from requests.exceptions import HTTPError, RequestException
-from rest_framework import exceptions, mixins, status, viewsets
+from rest_framework import exceptions, mixins, status, viewsets, views
 from rest_framework.response import Response
 
 from api.models import Comment, Movie
@@ -99,3 +104,79 @@ class CommentsViewSet(mixins.ListModelMixin,
             movie = get_object_or_404(Movie, id=movie_id)
             queryset = queryset.filter(movie_id=movie)
         return queryset
+
+
+class TopMovies(views.APIView):
+    """View to list top movies in specified date range."""
+    def get_start_end_date_from_request(self, request):
+        """Validate start and end date."""
+        missing_params = {}
+        # get start and end date from query_params
+        start = request.query_params.get('start', None)
+        end = request.query_params.get('end', None)
+        if start is None:
+            missing_params['start'] = [
+                'Query parameter "start" not found.'
+            ]
+        if end is None:
+            missing_params['end'] = [
+                'Query parameter "end" not found.'
+            ]
+        if missing_params:
+            raise exceptions.NotFound(missing_params)
+        # check if they are valid dates
+        invalid_date = {}
+        date_format = '%Y-%m-%d'
+        try:
+            start_date = datetime.datetime.strptime(start, date_format)
+        except ValueError:
+            invalid_date['start'] = [
+                'Query parameter "start" is not in YYYY-MM-DD format.'
+            ]
+        try:
+            end_date = datetime.datetime.strptime(end, date_format)
+            # add one day to the end range to include comments from end day
+            end_date += datetime.timedelta(days=1)
+            end = end_date.strftime(date_format)
+        except ValueError:
+            invalid_date['end'] = [
+                'Query parameter "end" is not in YYYY-MM-DD format.'
+            ]
+        if invalid_date:
+            raise exceptions.ValidationError(invalid_date)
+
+        if end_date < start_date:
+            raise exceptions.ValidationError({
+                'start': [
+                    'start date should be less than or equal end date'
+                ]
+            })
+        return start, end
+
+    def get(self, request):
+        """Extract dates range from query_params and return top movies."""
+        start, end = self.get_start_end_date_from_request(request)
+        # pull ranked movies sorted by number of comments in given date range
+        movies_query = Movie.objects.annotate(
+            total_comments=Coalesce(
+                Sum(Case(
+                    When(comment__created__range=[start, end], then=1),
+                    output_field=IntegerField()
+                )),
+                0
+            ),
+            rank=Window(
+                expression=DenseRank(),
+                order_by=F('total_comments').desc(),
+            )
+        ).order_by('-total_comments', 'id')
+        # extract needed fields to response
+        # it's too trivial to use Serializer here
+        movies = [
+            {
+                'movie_id': movie.id,
+                'total_comments': movie.total_comments,
+                'rank': movie.rank
+            } for movie in movies_query
+        ]
+        return Response(movies)
