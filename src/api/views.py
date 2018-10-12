@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class MovieList(mixins.ListModelMixin,
+                mixins.RetrieveModelMixin,
                 viewsets.GenericViewSet):
     queryset = Movie.objects.all()
     serializer_class = MovieSerializer
