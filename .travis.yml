@@ -1,0 +1,23 @@
+language: python
+
+python:
+  - '3.7-dev'
+
+env:
+  global:
+    - DATABASE_URL=postgres://postgres@localhost/moviesdb
+    - secure: tlRM/NwJbj/gi517BiyiEnH2GMp85SymeSUllAuWbhvpFjY85vbbQAyvMu+YCVjaqUeXhO26sbFepn3JiRTwHZv9bFUOG7ovuSTdFEsb3DpFBtMH0FJgYBPsvijCRqFX5e4VlztS8eRLfV98oKatEAjiC76JMgS4nL6NFiZvy/Ldjbws5Os5JXRWk5cx+NUON1sUs1cpxCfi/GS6jJyG6gG574ZXPd+k47OkTFMmG1w2BEcQynkJT1YkujJsymuWumvCXlUJzgDJqlhgjOl2vN1zS7lu7PTf9XByDM7fkN2tTk7TfvQ3S+CEcKVdNprkV3YhqnYIKLSchrQXiaGGiTU7LYxs5/bgc6ugaA3n6nI7OvPtQ5bF2kjE6YxRmlhZZ0S0LIge4ZHn9c0aZSpLHscAfnffqI68AtGZeOLQwMd7QsZUJrGrfo+TiMzh20MVW7KXmqMM+T5SXS1LxvGbmS9P6/JtTf/Fxf6okvc/M3uZYufqzKLhOCXDmJ7Ni/aB9zNrA1LHyqo5fNfte3E/CIDVylqd89lc9SZbvQFbehep2PlZzMUJBZhRC9cai3IbFhGOFomxsK8DsDLDZtbd+RfYpOgnZl4gqTVg4NkZuyOng0dkMRUC8qQMjK6js84S5PhrknVDBWzMTpuY4nSM8z5SoH2VoHfFzd/5vlICvn4=
+
+addons:
+  postgresql: "9.6"
+
+before_install:
+  - psql -c 'create database moviesdb;' -U postgres
+
+install:
+  - pip install -r requirements.txt
+  - cd src
+  - python manage.py migrate
+
+script:
+  - python manage.py test
