@@ -60,7 +60,7 @@ class MovieViewSet(mixins.ListModelMixin,
                 'OMDB API': [
                     e.strerror,
                 ],
-            })
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         except RequestException as e:
             logging.error('omdbapi raised exception: %r', e)
             return Response({
@@ -79,7 +79,9 @@ class MovieViewSet(mixins.ListModelMixin,
             return movie_exists_response()
         logger.info('Created new movie: %s', movie.title)
         # return new movie in response
-        return Response(MovieSerializer(movie).data)
+        return Response(
+            MovieSerializer(movie).data, status=status.HTTP_201_CREATED
+        )
 
 
 class CommentsViewSet(mixins.ListModelMixin,
