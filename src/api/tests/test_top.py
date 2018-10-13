@@ -152,3 +152,11 @@ class TopListTestCase(APITestCase):
             'start': '2018-01-07',
         })
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_start_one_day_after_end(self):
+        url = reverse('top')
+        response = self.client.get(url, {
+            'end': '2018-01-01',
+            'start': '2018-01-02',
+        })
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
