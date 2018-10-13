@@ -147,7 +147,7 @@ class TopMovies(views.APIView):
         if invalid_date:
             raise exceptions.ValidationError(invalid_date)
 
-        if end_date < start_date:
+        if end_date <= start_date:
             raise exceptions.ValidationError({
                 'start': [
                     'start date should be less than or equal end date'
