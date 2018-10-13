@@ -208,7 +208,7 @@ class MovieViewSetCreateTestCase(APITestCase):
         url = reverse('movie-list')
         data = {'title': 'Third Movie'}
         response = self.client.post(url, data)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Movie.objects.count(), movies_before_request + 1)
 
     def test_create_without_title(self):
